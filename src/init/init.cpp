@@ -1,4 +1,4 @@
-#include "scope/init/init.hpp
+#include "scope/init/init.hpp"
 
 void plugin_init(int argc, char **argv) {
     (void) argc;
