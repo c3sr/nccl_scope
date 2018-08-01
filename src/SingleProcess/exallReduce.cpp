@@ -42,6 +42,8 @@ static void NCCL_function_EXALLREDUCE(benchmark::State &state) {
   float** sendbuff = (float**)malloc(nDev * sizeof(float*));
   float** recvbuff = (float**)malloc(nDev * sizeof(float*));
   cudaStream_t* s = (cudaStream_t*)malloc(sizeof(cudaStream_t)*nDev);
+  cudaEvent_t* starts = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+  cudaEvent_t* stops = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
 
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
@@ -50,25 +52,31 @@ static void NCCL_function_EXALLREDUCE(benchmark::State &state) {
     CUDACHECK(cudaMemset(sendbuff[i], 1, size * sizeof(float)));
     CUDACHECK(cudaMemset(recvbuff[i], 0, size * sizeof(float)));
     CUDACHECK(cudaStreamCreate(s+i));
+    CUDACHECK(cudaEventCreate(starts+i));
+    CUDACHECK(cudaEventCreate(stops+i));
   }
 
   //initializing NCCL
   NCCLCHECK(ncclCommInitAll(comms, nDev, devs));
+
 for(auto _ : state){
-  //calling NCCL communication API. Group API is required when using
-  //multiple devices per thread
-//  NCCLCHECK(ncclGroupStart());
-  for (int i = 0; i < nDev; ++i)
+  NCCLCHECK(ncclGroupStart());
+  for (int i = 0; i < nDev; ++i){
+    CUDACHECK(cudaEventRecord(starts[i], s[i]));
     NCCLCHECK(ncclAllReduce((const void*)sendbuff[i], (void*)recvbuff[i], size, ncclFloat, ncclSum,
         comms[i], s[i]));
-//  NCCLCHECK(ncclGroupEnd());
+    CUDACHECK(cudaEventRecord(stops[i], s[i]));
+  }
+  NCCLCHECK(ncclGroupEnd());
 
-  //synchronizing on CUDA streams to wait for completion of NCCL operation
+  //synchronize
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
     CUDACHECK(cudaStreamSynchronize(s[i]));
   }
+
 }
+
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
@@ -76,10 +84,10 @@ for(auto _ : state){
     CUDACHECK(cudaFree(recvbuff[i]));
   }
 
-  //finalizing NCCL
+  //destroy comms
   for(int i = 0; i < nDev; ++i)
       ncclCommDestroy(comms[i]);
 
 }
-BENCHMARK(NCCL_function_EXALLREDUCE)->Apply(ArgsCountGpuGpuGpuGpu)->UseManualTime();
+BENCHMARK(NCCL_function_EXALLREDUCE)->Apply(ArgsCountGpuGpuGpuGpu);
 

@@ -29,16 +29,17 @@ inline static void ArgsCountGpuGpuGpuGpu(benchmark::internal::Benchmark* b) {
     }
   }
 */
+
   for (int gpu0 = 0; gpu0 < n; ++gpu0){
    for(int gpu1 = 0; gpu1 < n; ++gpu1){
      for(int j = 8; j <31; ++j){
-      int gpu1 = 0;
       int gpu2 = 0;
       int gpu3 = 0;
       b-> Args({j,gpu0,gpu1, gpu2, gpu3});
       }
    }
   }
+
 
 }
 

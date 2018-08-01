@@ -141,27 +141,25 @@ assert(sendbuff.size() == recvbuff.size());
 assert(streams.size() == sendbuff.size());
 */
 //benchmark loop
-for(auto _ : state){
+//for(auto _ : state){
 NCCLCHECK(ncclGroupStart());
     for (int i = 0; i < nDev; ++i) {
       auto start = starts[i];
       auto stop = stops[i];
       auto stream = streams[i];
       auto comm = comms[i];
-/*      if(PRINT_IF_ERROR(cudaEventRecord(start, stream ))) {
+      if(PRINT_IF_ERROR(cudaEventRecord(start, stream ))) {
         state.SkipWithError(NAME " failed to record start event");
         return;
       }
-*/
       if(PRINT_IF_ERROR(ncclAllReduce(sendbuff[i], recvbuff[i], size, ncclFloat, ncclSum, comm, stream))){
            state.SkipWithError(NAME "failed to do ncclAllReduce");
       }
-/*
-       if(PRINT_IF_ERROR(cudaEventRecord(stop, stream))) {
+      if(PRINT_IF_ERROR(cudaEventRecord(stop, stream))) {
         state.SkipWithError(NAME " failed to record stop event");
         return;
       }
-*/
+
     }
 NCCLCHECK(ncclGroupEnd());
     //synchronizing on CUDA streams to wait for completion of NCCL operation
@@ -175,7 +173,7 @@ NCCLCHECK(ncclGroupEnd());
        return;
      }
    }
-/*
+
     // Find the longest time between any start and stop
     float maxMillis = 0;
     for (const auto start : starts) {
@@ -193,8 +191,8 @@ NCCLCHECK(ncclGroupEnd());
 
 
     state.SetIterationTime(maxMillis / 1000);
-*/
-}
+
+//}
 
   state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes) * 2);
   state.counters.insert({{"bytes", bytes}});
