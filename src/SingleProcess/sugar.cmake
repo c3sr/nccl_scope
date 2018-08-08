@@ -19,8 +19,7 @@ sugar_files(
 sugar_files(
     nccl_SOURCES
     allGather.cpp
-    allReduce.cpp
-    allReduceOrig.cpp
+    charallReduce.cpp
     exallReduce.cpp
     reduceScatter.cpp
 )
