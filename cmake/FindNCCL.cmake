@@ -35,8 +35,6 @@ find_library(NCCL_LIBRARY
   ${NCCL_LIB_DIR}
   ${NCCL_ROOT_DIR}
   ${NCCL_ROOT_DIR}/lib
-  ${NCCL_ROOT_DIR}/lib/x86_64-linux-gnu
-  ${NCCL_ROOT_DIR}/lib64
   ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
 
 include(FindPackageHandleStandardArgs)
@@ -54,6 +52,6 @@ if (NCCL_FOUND)
   endif()
   set(NCCL_INCLUDE_DIRS ${NCCL_INCLUDE_DIR})
   set(NCCL_LIBRARIES ${NCCL_LIBRARY})
-  message(STATUS "Found NCCL (include: ${NCCL_INCLUDE_DIRS}, library: ${NCCL_LIBRARIES})")
+ message(STATUS "Found NCCL (include: ${NCCL_INCLUDE_DIRS}, library: ${NCCL_LIBRARIES})")
   mark_as_advanced(NCCL_ROOT_DIR NCCL_INCLUDE_DIRS NCCL_LIBRARIES)
 endif()

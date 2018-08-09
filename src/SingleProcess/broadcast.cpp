@@ -10,7 +10,7 @@
 
 #include "SingleProcess/args.hpp"
 
-#define NAME "NCCL/function/REDUCESCATTER"
+#define NAME "NCCL/function/BROADCAST"
 //time problems only 
 
 #define CUDACHECK(cmd) do {                         \
@@ -31,19 +31,22 @@
 } while(0)
 
 
-static void NCCL_function_REDUCESCATTER(benchmark::State &state) {
-ncclComm_t comms[4];
+static void NCCL_function_BROADCAST(benchmark::State &state) {
+  ncclComm_t comms[4];
 
   //managing 4 devices
   int nDev = 4;
   int size = 32*1024*1024;
   int devs[4] = { 0, 1, 2, 3 };
-
+  
   //allocating and initializing device buffers
   float** sendbuff = (float**)malloc(nDev * sizeof(float*));
   float** recvbuff = (float**)malloc(nDev * sizeof(float*));
   cudaStream_t* s = (cudaStream_t*)malloc(sizeof(cudaStream_t)*nDev);
-
+  cudaEvent_t* starts = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+  cudaEvent_t* stops = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+  //cudaEvent_t* zeros = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+  
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
     CUDACHECK(cudaMalloc(sendbuff + i, size * sizeof(float)));
@@ -51,25 +54,54 @@ ncclComm_t comms[4];
     CUDACHECK(cudaMemset(sendbuff[i], 1, size * sizeof(float)));
     CUDACHECK(cudaMemset(recvbuff[i], 0, size * sizeof(float)));
     CUDACHECK(cudaStreamCreate(s+i));
+    CUDACHECK(cudaEventCreate(starts+i));
+    CUDACHECK(cudaEventCreate(stops+i));
+   // CUDACHECK(cudaEventCreate(zeros+i));
   }
-
-  //initializing NCCL
+ //nitializing NCCL
   NCCLCHECK(ncclCommInitAll(comms, nDev, devs));
-for(auto _: state){
-  //calling NCCL communication API. Group API is required when using
-  //multiple devices per thread
+for(auto _ : state){
   NCCLCHECK(ncclGroupStart());
-  for (int i = 0; i < nDev; ++i)
-    NCCLCHECK(ncclReduceScatter((const void*)sendbuff[i], (void*)recvbuff[i], size, ncclFloat, ncclSum,
+  for (int i = 0; i < nDev; ++i){
+    CUDACHECK(cudaEventRecord(starts[i], s[i]));
+    NCCLCHECK(ncclBroadcast(sendbuff[i], recvbuff[i], size, ncclFloat,0,
         comms[i], s[i]));
+    CUDACHECK(cudaEventRecord(stops[i], s[i]));
+    //CUDACHECK(cudaEventRecord(zeros[i], s[i]));
+ }
   NCCLCHECK(ncclGroupEnd());
 
-  //synchronizing on CUDA streams to wait for completion of NCCL operation
+  //synchronize
   for (int i = 0; i < nDev; ++i) {
-//    CUDACHECK(cudaSetDevice(i));
-    CUDACHECK(cudaStreamSynchronize(s[i]));
+    CUDACHECK(cudaSetDevice(i));
+    CUDACHECK(cudaEventSynchronize(stops[i]));
+    CUDACHECK(cudaStreamSynchronize(s[i])); 
   }
+/*
+//largest time diff between starts and stops
+  float maxMillis = 0; 
+    for (int i = 0; i < nDev; ++i ) {
+     for (int j =0; j < nDev; ++j) {
+        //use eventelapsed against a zero
+        float millis;
+	float start;
+	float stop;
+        CUDACHECK(cudaSetDevice(i));
+ 	CUDACHECK(cudaEventElapsedTime(&millis, starts[i] , stops[j])); 
+        //CUDACHECK(cudaSetDevice(j));
+        //CUDACHEKC(cudaSetDevice(j));
+        //CUDACHECK(cudaEventTimeElapsed(&stop, 0, stops[j]));
+       maxMillis = std::max(millis, maxMillis);
+
+    }
+
+  }
+   state.SetIterationTime(maxMillis / 1000);
+*/
 }
+//state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes) * 2);
+//state.counters.insert({{"bytes", bytes}});
+
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
@@ -77,11 +109,10 @@ for(auto _: state){
     CUDACHECK(cudaFree(recvbuff[i]));
   }
 
-  //finalizing NCCL
+  //destroy comms
   for(int i = 0; i < nDev; ++i)
       ncclCommDestroy(comms[i]);
 
-
 }
-BENCHMARK(NCCL_function_REDUCESCATTER)->Apply(ArgsCountGpuGpuGpuGpu);
+BENCHMARK(NCCL_function_BROADCAST)->Apply(ArgsCountGpuGpuGpuGpu);
 

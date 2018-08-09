@@ -77,16 +77,16 @@ for(auto _ : state){
     CUDACHECK(cudaEventSynchronize(stops[i]));
     CUDACHECK(cudaStreamSynchronize(s[i])); 
   }
-
+/*
 //largest time diff between starts and stops
   float maxMillis = 0; 
     for (int i = 0; i < nDev; ++i ) {
      for (int j =0; j < nDev; ++j) {
         //use eventelapsed against a zero
         float millis;
-//	float start;
-//	float stop;
-//        CUDACHECK(cudaSetDevice(i));
+	float start;
+	float stop;
+        CUDACHECK(cudaSetDevice(i));
  	CUDACHECK(cudaEventElapsedTime(&millis, starts[i] , stops[j])); 
         //CUDACHECK(cudaSetDevice(j));
         //CUDACHEKC(cudaSetDevice(j));
@@ -97,7 +97,7 @@ for(auto _ : state){
 
   }
    state.SetIterationTime(maxMillis / 1000);
-
+*/
 }
 //state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes) * 2);
 //state.counters.insert({{"bytes", bytes}});
@@ -114,5 +114,5 @@ for(auto _ : state){
       ncclCommDestroy(comms[i]);
 
 }
-BENCHMARK(NCCL_function_EXALLREDUCE)->Apply(ArgsCountGpuGpuGpuGpu)->UseManualTime();
+BENCHMARK(NCCL_function_EXALLREDUCE)->Apply(ArgsCountGpuGpuGpuGpu);
 
