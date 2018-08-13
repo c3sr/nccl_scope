@@ -73,7 +73,7 @@ for(auto _ : state){
 
   //synchronize
   for (int i = 0; i < nDev; ++i) {
-    CUDACHECK(cudaSetDevice(i));
+//    CUDACHECK(cudaSetDevice(i));
     CUDACHECK(cudaEventSynchronize(stops[i]));
     CUDACHECK(cudaStreamSynchronize(s[i])); 
   }

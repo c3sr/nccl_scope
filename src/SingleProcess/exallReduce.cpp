@@ -73,11 +73,11 @@ for(auto _ : state){
 
   //synchronize
   for (int i = 0; i < nDev; ++i) {
-    CUDACHECK(cudaSetDevice(i));
+  //  CUDACHECK(cudaSetDevice(i));
     CUDACHECK(cudaEventSynchronize(stops[i]));
     CUDACHECK(cudaStreamSynchronize(s[i])); 
   }
-/*
+
 //largest time diff between starts and stops
   float maxMillis = 0; 
     for (int i = 0; i < nDev; ++i ) {
@@ -86,6 +86,7 @@ for(auto _ : state){
         float millis;
 	float start;
 	float stop;
+	std::cout << "work";
         CUDACHECK(cudaSetDevice(i));
  	CUDACHECK(cudaEventElapsedTime(&millis, starts[i] , stops[j])); 
         //CUDACHECK(cudaSetDevice(j));
@@ -97,11 +98,14 @@ for(auto _ : state){
 
   }
    state.SetIterationTime(maxMillis / 1000);
-*/
+
 }
 //state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes) * 2);
 //state.counters.insert({{"bytes", bytes}});
-
+state.counters["Foo"] = numFoos;
+state.counters["Foo"] = numFoos;
+state.counters["Foo"] = numFoos;
+state.counters["Foo"] = numFoos;
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));

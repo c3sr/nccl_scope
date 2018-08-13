@@ -37,6 +37,7 @@ ncclComm_t comms[4];
   //managing 4 devices
   int nDev = 4;
   int size = 32*1024*1024;
+  int sendcout = 32 * 256 * 1024;
   int devs[4] = { 0, 1, 2, 3 };
 
   //allocating and initializing device buffers
@@ -46,9 +47,9 @@ ncclComm_t comms[4];
 
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
-    CUDACHECK(cudaMalloc(sendbuff + i, size * sizeof(float)));
+    CUDACHECK(cudaMalloc(sendbuff + i, size * sizeof(float) * nDev));
     CUDACHECK(cudaMalloc(recvbuff + i, size * sizeof(float)));
-    CUDACHECK(cudaMemset(sendbuff[i], 1, size * sizeof(float)));
+    CUDACHECK(cudaMemset(sendbuff[i], 1, size * sizeof(float)* nDev));
     CUDACHECK(cudaMemset(recvbuff[i], 0, size * sizeof(float)));
     CUDACHECK(cudaStreamCreate(s+i));
   }
@@ -59,14 +60,17 @@ for(auto _: state){
   //calling NCCL communication API. Group API is required when using
   //multiple devices per thread
   NCCLCHECK(ncclGroupStart());
-  for (int i = 0; i < nDev; ++i)
-    NCCLCHECK(ncclReduceScatter((const void*)sendbuff[i], (void*)recvbuff[i], size, ncclFloat, ncclSum,
+  for (int i = 0; i < nDev; ++i){
+    int* rank;
+    ncclCommUserRank( comms[i], rank);
+    NCCLCHECK(ncclReduceScatter((const void*)sendbuff[i], (void*)recvbuff[i], (size * sizeof(float))/4, ncclFloat, ncclSum,
         comms[i], s[i]));
+  }
   NCCLCHECK(ncclGroupEnd());
 
   //synchronizing on CUDA streams to wait for completion of NCCL operation
   for (int i = 0; i < nDev; ++i) {
-//    CUDACHECK(cudaSetDevice(i));
+    CUDACHECK(cudaSetDevice(i));
     CUDACHECK(cudaStreamSynchronize(s[i]));
   }
 }
