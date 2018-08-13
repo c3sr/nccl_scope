@@ -67,45 +67,34 @@ for(auto _ : state){
     NCCLCHECK(ncclAllReduce(sendbuff[i], recvbuff[i], size, ncclFloat, ncclSum,
         comms[i], s[i]));
     CUDACHECK(cudaEventRecord(stops[i], s[i]));
-    //CUDACHECK(cudaEventRecord(zeros[i], s[i]));
  }
   NCCLCHECK(ncclGroupEnd());
-
+ 
+  state.PauseTiming();
+  float msecTotal = 0.0f;
   //synchronize
   for (int i = 0; i < nDev; ++i) {
-  //  CUDACHECK(cudaSetDevice(i));
     CUDACHECK(cudaEventSynchronize(stops[i]));
     CUDACHECK(cudaStreamSynchronize(s[i])); 
   }
-
-//largest time diff between starts and stops
-  float maxMillis = 0; 
-    for (int i = 0; i < nDev; ++i ) {
-     for (int j =0; j < nDev; ++j) {
-        //use eventelapsed against a zero
-        float millis;
-	float start;
-	float stop;
-	std::cout << "work";
-        CUDACHECK(cudaSetDevice(i));
- 	CUDACHECK(cudaEventElapsedTime(&millis, starts[i] , stops[j])); 
-        //CUDACHECK(cudaSetDevice(j));
-        //CUDACHEKC(cudaSetDevice(j));
-        //CUDACHECK(cudaEventTimeElapsed(&stop, 0, stops[j]));
-       maxMillis = std::max(millis, maxMillis);
-
-    }
-
-  }
-   state.SetIterationTime(maxMillis / 1000);
+  state.SetIterationTime(msecTotal/ 1000);
+  state.ResumeTiming();
 
 }
-//state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes) * 2);
-//state.counters.insert({{"bytes", bytes}});
-state.counters["Foo"] = numFoos;
-state.counters["Foo"] = numFoos;
-state.counters["Foo"] = numFoos;
-state.counters["Foo"] = numFoos;
+
+float d0, d1, d2, d3, total;
+std::vector<float> device = {d0, d1, d2, d3};
+for (int i = 0; i < nDev; ++i ) {
+    CUDACHECK(cudaEventElapsedTime(&device[i], starts[i] , stops[i]));
+    total += device[i];	
+ }
+
+state.counters["d0"] = device[0];
+state.counters["d1"] = device[1];
+state.counters["d2"] = device[2];
+state.counters["d3"] = device[3];
+state.counters["avg"]= total/nDev;
+
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));
@@ -118,5 +107,5 @@ state.counters["Foo"] = numFoos;
       ncclCommDestroy(comms[i]);
 
 }
-BENCHMARK(NCCL_function_EXALLREDUCE)->Apply(ArgsCountGpuGpuGpuGpu);
+BENCHMARK(NCCL_function_EXALLREDUCE)->Apply(ArgsCountGpuGpuGpuGpu)->UseManualTime();
 

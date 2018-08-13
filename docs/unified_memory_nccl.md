@@ -15,9 +15,9 @@ These benchmarks may be listed with the argument
 | `NCCL_function_REDUCESCATTER` | reduceScatter | `log2 size / src GPUs / dst GPUs` |
 | `NCCL_function_BROADCAST` | broadcast | `log2 size / src GPU / dst GPUs` |
 
-## allReduce GPU Technique
+## allReduce, broadcast, and reduce GPU Technique
 
-To perform reductions on data across devices, the benchmark setup phase looks like this
+To perform reductions/copies on data across devices, the benchmark setup phase looks like this
 
 ```
 // communicator setup 
@@ -42,16 +42,64 @@ for (int i = 0; i < nDev; ++i) {
     }
 end loop
 ```
+## reduceScatter GPU Technique
 
-For a device -> host transfer, the setup and benchmark loop looks like this
+To perform reductions/copies on data across devices, the benchmark setup phase looks like this
 
 ```
-// device-to-host setup
-cudaSetDevice(src)
-numa_bind(dst)
-cudaMallocManaged(&ptr)
+// communicator setup
+  ncclComm_t comms
 
-// device-to-host benchmark loop
+//allocate and initalize device buffers
+  float** sendbuff = (float**)malloc(nDev * sizeof(float*));
+  float** recvbuff = (float**)malloc(nDev * sizeof(float*));
+  cudaStream_t* s = (cudaStream_t*)malloc(sizeof(cudaStream_t)*nDev);
+  cudaEvent_t* starts = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+  cudaEvent_t* stops = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+
+for (int i = 0; i < nDev; ++i) {
+    cudaSetDevice(i)
+    cudaMalloc(sendbuff + i, size * sizeof(float) * nDev)
+    cudaMalloc(recvbuff + i, size * sizeof(float))
+    cudaMemset(sendbuff[i], 1, size * sizeof(float) * nDev)
+    cudaMemset(recvbuff[i], 0, size * sizeof(float))
+    cudaStreamCreate(s+i)
+    cudaEventCreate(starts+i)
+    cudaEventCreate(stops+i)
+    }
+end loop
+```
+## allGather GPU Technique
+
+To perform reductions/copies on data across devices, the benchmark setup phase looks like this
+
+```
+// communicator setup
+  ncclComm_t comms
+
+//allocate and initalize device buffers
+  float** sendbuff = (float**)malloc(nDev * sizeof(float*));
+  float** recvbuff = (float**)malloc(nDev * sizeof(float*));
+  cudaStream_t* s = (cudaStream_t*)malloc(sizeof(cudaStream_t)*nDev);
+  cudaEvent_t* starts = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+  cudaEvent_t* stops = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
+
+for (int i = 0; i < nDev; ++i) {
+    cudaSetDevice(i)
+    cudaMalloc(sendbuff + i, size * sizeof(float))
+    cudaMalloc(recvbuff + i, size * sizeof(float)*nDev)
+    cudaMemset(sendbuff[i], 1, size * sizeof(float))
+    cudaMemset(recvbuff[i], 0, size * sizeof(float)*nDev)
+    cudaStreamCreate(s+i)
+    cudaEventCreate(starts+i)
+    cudaEventCreate(stops+i)
+    }
+end loop
+```
+
+## The benchmark loop 
+
+```
 loop (state)
     // move pages to src
     cudaMemPrefetchAsync(ptr, src)
