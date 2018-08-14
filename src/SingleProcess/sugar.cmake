@@ -19,8 +19,8 @@ sugar_files(
 sugar_files(
     nccl_SOURCES
     allGather.cpp
+    allReduce.cpp
     broadcast.cpp
-    exallReduce.cpp
     reduce.cpp
     reduceScatter.cpp
 )
