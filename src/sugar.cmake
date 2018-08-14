@@ -11,5 +11,7 @@ endif()
 
 include(sugar_include)
 
+sugar_include(MultiGPU)
 sugar_include(SingleProcess)
+sugar_include(init)
 

@@ -3,17 +3,17 @@
 Comm|Scope defines 5 microbenchmarks to measure unified memory coherence bandwidth.
 These benchmarks may be listed with the argument
 
-    --benchmark_filter="NCCL_function"
+    --benchmark_filter="NCCL_ops"
 
 ## Implementations
 
 |Benchmarks|Description|Argument Format|
 |-|-|-|
-| `NCCL_function_ALLREDUCE` | allReduce | `log2 size / src GPUs / dst GPUs` |
-| `NCCL_function_REDUCE` | reduce | `log2 size / src GPUs / dst GPU` |
-| `NCCL_function_ALLGATHER` | allGather | `log2 size / src GPUs / dst GPUs` |
-| `NCCL_function_REDUCESCATTER` | reduceScatter | `log2 size / src GPUs / dst GPUs` |
-| `NCCL_function_BROADCAST` | broadcast | `log2 size / src GPU / dst GPUs` |
+| `NCCL_ops_allReduce` | allReduce | `log2 size / src GPUs / dst GPUs` |
+| `NCCL_ops_reduce` | reduce | `log2 size / src GPUs / dst GPU` |
+| `NCCL_ops_allGather` | allGather | `log2 size / src GPUs / dst GPUs` |
+| `NCCL_ops_reduceScatter` | reduceScatter | `log2 size / src GPUs / dst GPUs` |
+| `NCCL_ops_broadcast` | broadcast | `log2 size / src GPU / dst GPUs` |
 
 ## allReduce, broadcast, and reduce GPU Technique
 
@@ -101,13 +101,29 @@ end loop
 
 ```
 loop (state)
-    // move pages to src
-    cudaMemPrefetchAsync(ptr, src)
-    cudaDeviceSynchronize(src)
-    // execute workload on cpu
-    state.resumeTiming()
-    write_cpu(ptr)
-    state.stopTiming()
+  cudaEventRecord(start, NULL)  
+
+    ncclGroupStart()
+    loop(nDev)
+        cudaEventRecord(starts[i],s[i])
+	ncclOperation()
+        cudaEventRecord(stops[i],s[i])
+    end loop
+    ncclGroupEnd()
+
+  cudaEventRecord(stop, NULL)
+    loop(nDev)
+        cudaStreamSynchronize(s[i])
+    end loop  
+    cudaEventSynchronize(stop)
+
+  //timing
+  state.PauseTiming()
+  float msecTotal = 0.0f
+  cudaEventElapsedTime(&msecTotal, start, stop)
+  state.SetIterationTime(msecTotal/ 1000)
+  state.ResumeTiming()
+
 end loop
 ```
 
