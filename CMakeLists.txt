@@ -8,7 +8,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 # The plugin is a static library that Scope will be linked with
 add_library(nccl_scope OBJECT ${nccl_SOURCES} ${nccl_CUDA_SOURCES} )
 target_include_directories(nccl_scope PRIVATE 
-    ${SRC_DIR}
+    ${SCOPE_SRC_DIR}
     ${THIRDPARTY_DIR}
     ${TOP_DIR}/include
     ${CUDA_INCLUDE_DIRS}
