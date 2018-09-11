@@ -32,7 +32,8 @@
 
 static void NCCL_ops_allReduce(benchmark::State &state) {
   ncclComm_t comms[4];
-
+//const int cuda_id = FLAG(ngpu)[0];
+//  std::cout<<cuda_id;
   //managing 4 devices
 
   const auto bytes = 1ULL << static_cast<size_t>(state.range(0));
