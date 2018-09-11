@@ -31,15 +31,15 @@
 
 
 static void NCCL_ops_allReduce(benchmark::State &state) {
-  ncclComm_t comms[4];
-const int cuda_id = FLAG(ngpu)[0];
-//  std::cout<<cuda_id;
+const int gpus = FLAG(ngpu);  
+ncclComm_t comms[4];
   //managing 4 devices
-
   const auto bytes = 1ULL << static_cast<size_t>(state.range(0));
-  int nDev = 4;
-  int devs[4] = { 0, 1, 2, 3 };
-
+  int nDev = gpus;
+  int devs[gpus];
+  for(int i = 0; i <nDev; ++i){
+     devs[i] = i;
+  }
   //allocating and initializing device buffers
   float** sendbuff = (float**)malloc(nDev * sizeof(float*));
   float** recvbuff = (float**)malloc(nDev * sizeof(float*));
@@ -96,7 +96,7 @@ for(auto _ : state){
 
 state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes));
 state.counters.insert({{"bytes", bytes}});
-
+/*
 //device time comparisons
 float d0, d1, d2, d3;
 float total = 0.0f;
@@ -111,7 +111,7 @@ state.counters["d1"] = device[1];
 state.counters["d2"] = device[2];
 state.counters["d3"] = device[3];
 state.counters["avg"]= total/nDev;
-
+*/
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
     CUDACHECK(cudaSetDevice(i));

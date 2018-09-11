@@ -7,7 +7,7 @@
 #include <cuda_runtime.h>
 
 #include "scope/init/init.hpp"
-
+#include "init/flags.hpp"
 #include "SingleProcess/args.hpp"
 
 #define NAME "NCCL/ops/allGather"
@@ -31,12 +31,16 @@
 
 
 static void NCCL_ops_allGather(benchmark::State &state) {
-  ncclComm_t comms[4];
+const int gpus = FLAG(ngpu);
+  ncclComm_t comms[gpus];
 
   //managing 4 devices
   const auto bytes = 1ULL << static_cast<size_t>(state.range(0));
-  int nDev = 4;
-  int devs[4] = { 0, 1, 2, 3 };
+  int nDev = gpus;
+  int devs[gpus];
+  for(int i = 0; i < nDev; ++i){
+     devs[i]=i;
+  }
 
   //allocating and initializing device buffers
   float** sendbuff = (float**)malloc(nDev * sizeof(float*));
