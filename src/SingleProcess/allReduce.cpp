@@ -9,7 +9,7 @@
 #include "scope/init/init.hpp"
 
 #include "SingleProcess/args.hpp"
-
+#include "init/flags.hpp"
 #define NAME "NCCL/ops/allReduce"
 
 #define CUDACHECK(cmd) do {                         \
@@ -32,7 +32,7 @@
 
 static void NCCL_ops_allReduce(benchmark::State &state) {
   ncclComm_t comms[4];
-//const int cuda_id = FLAG(ngpu)[0];
+const int cuda_id = FLAG(ngpu)[0];
 //  std::cout<<cuda_id;
   //managing 4 devices
 
