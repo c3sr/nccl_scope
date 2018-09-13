@@ -12,7 +12,13 @@ endif()
 include(sugar_files)
 
 sugar_files(
+    nccl_HEADERS
+    flags.hpp
+)
+
+sugar_files(
     nccl_SOURCES
+    flags.cpp
     init.cpp
 )
 
