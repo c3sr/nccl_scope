@@ -31,7 +31,7 @@
 
 
 static void NCCL_ops_allGather(benchmark::State &state) {
-const int gpus = FLAG(ngpu);
+  const int gpus = FLAG(ngpu);
   ncclComm_t comms[gpus];
 
   //managing 4 devices

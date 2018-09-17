@@ -1,4 +1,4 @@
-OPTION(ENABLE_NCCL "Enable NCCL|Scope (github.com/c3sr/nccl_scope)" OFF)
+OPTION(ENABLE_NCCL "Enable NCCL|Scope (github.com/c3sr/nccl_scope)" ON)
 if (NOT ENABLE_NCCL)
   return()
 endif()
@@ -13,13 +13,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 # The plugin is a static library that Scope will be linked with
 scope_add_library(nccl_scope OBJECT ${nccl_SOURCES} ${nccl_CUDA_SOURCES} )
 target_include_directories(nccl_scope PRIVATE 
-    ${SCOPE_SRC_DIR}
-    ${THIRDPARTY_DIR}
-    ${TOP_DIR}/include
-    ${CUDA_INCLUDE_DIRS}
     "src"
 )
-
+target_include_scope_directories(nccl_scope)
 target_compile_features(nccl_scope PUBLIC cxx_std_11)
 set_property(TARGET nccl_scope PROPERTY CUDA_STANDARD 11)
 target_link_libraries(nccl_scope PRIVATE benchmark::benchmark)
