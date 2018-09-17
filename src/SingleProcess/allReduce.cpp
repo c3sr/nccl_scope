@@ -6,6 +6,8 @@
 
 #include <cuda_runtime.h>
 
+#include "scope/utils/utils.hpp"
+#include "scope/init/flags.hpp"
 #include "scope/init/init.hpp"
 
 #include "SingleProcess/args.hpp"
@@ -31,14 +33,14 @@
 
 
 static void NCCL_ops_allReduce(benchmark::State &state) {
-const int gpus = FLAG(ngpu);  
-ncclComm_t comms[4];
-  //managing 4 devices
+  const int nDev = FLAG(ngpu);  
+  ncclComm_t comms[nDev];
+
+  //managing nDev devices
   const auto bytes = 1ULL << static_cast<size_t>(state.range(0));
-  int nDev = gpus;
-  int devs[gpus];
+  int devs[nDev];
   for(int i = 0; i <nDev; ++i){
-     devs[i] = i;
+     devs[i] = FLAG(cuda_device_ids)[i];
   }
   //allocating and initializing device buffers
   float** sendbuff = (float**)malloc(nDev * sizeof(float*));
