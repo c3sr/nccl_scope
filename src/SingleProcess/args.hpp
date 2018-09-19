@@ -16,19 +16,6 @@ inline static void ArgsCountGpuGpuGpuGpu(benchmark::internal::Benchmark* b) {
   if (PRINT_IF_ERROR(cudaGetDeviceCount(&n))) {
     exit(1);
   }
-/*
-  for (int gpu0 = 0; gpu0 < n; ++gpu0) {
-    for (int gpu1 = 0; gpu1 < n; ++gpu1) {
-      for(int gpu2 = 0; gpu2 < n; ++gpu2){
-        for(int gpu3 = 0; gpu3 < n; ++gpu3){
-               for (int j = 8; j < 31; ++j) {
-                 b->Args({j, gpu0, gpu1, gpu2, gpu3});
-               }
-        }
-      }
-    }
-  }
-*/
 
   for (int gpu0 = 0; gpu0 < n; ++gpu0){
    for(int gpu1 = 0; gpu1 < n; ++gpu1){
