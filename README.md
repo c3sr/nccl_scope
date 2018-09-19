@@ -18,7 +18,7 @@ See the `docs` folder for a description of the benchmarks.
 All support this arguemnt: 
 
 * Number of GPUs
- + -g, --ngpus Default: 1. 
+     + `-g, --ngpus` Default: 1. 
 
 
 
