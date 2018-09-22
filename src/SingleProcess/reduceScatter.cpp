@@ -3,11 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <nccl.h>
-
 #include <cuda_runtime.h>
+
 #include "scope/utils/utils.hpp"
 #include "scope/init/flags.hpp"
-
 #include "scope/init/init.hpp"
 #include "init/flags.hpp"
 #include "SingleProcess/args.hpp"
@@ -62,13 +61,13 @@ static void NCCL_ops_reduceScatter(benchmark::State &state) {
     CUDACHECK(cudaEventCreate(stops+i));
   }
 
-cudaEvent_t start, stop;
-CUDACHECK(cudaEventCreate(&start));
-CUDACHECK(cudaEventCreate(&stop));
+  cudaEvent_t start, stop;
+  CUDACHECK(cudaEventCreate(&start));
+  CUDACHECK(cudaEventCreate(&stop));
 
- //initializing NCCL
+  //initializing NCCL
   NCCLCHECK(ncclCommInitAll(comms, nDev, devs));
-for(auto _ : state){
+  for(auto _ : state){
 
   CUDACHECK(cudaEventRecord(start, NULL));
 
@@ -96,25 +95,25 @@ for(auto _ : state){
   state.SetIterationTime(msecTotal/ 1000);
   state.ResumeTiming();
 
-}
+  }
 
-state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes));
-state.counters.insert({{"bytes", bytes}});
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(bytes));
+  state.counters.insert({{"bytes", bytes}});
 
-//device time comparisons
-float d0, d1, d2, d3;
-float total = 0.0f;
-std::vector<float> device = {d0, d1, d2, d3};
-for (int i = 0; i < nDev; ++i ) {
-    CUDACHECK(cudaEventElapsedTime(&device[i], starts[i] , stops[i]));
-    total += device[i];	
- }
+  //device time comparisons
+  float d0, d1, d2, d3;
+  float total = 0.0f;
+  std::vector<float> device = {d0, d1, d2, d3};
+  for (int i = 0; i < nDev; ++i ) {
+     CUDACHECK(cudaEventElapsedTime(&device[i], starts[i] , stops[i]));
+     total += device[i];	
+  }
 
-state.counters["d0"] = device[0];
-state.counters["d1"] = device[1];
-state.counters["d2"] = device[2];
-state.counters["d3"] = device[3];
-state.counters["avg"]= total/nDev;
+  state.counters["d0"] = device[0];
+  state.counters["d1"] = device[1];
+  state.counters["d2"] = device[2];
+  state.counters["d3"] = device[3];
+  state.counters["avg"]= total/nDev;
 
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
