@@ -13,22 +13,18 @@
 
 #define NAME "NCCL/ops/broadcast"
 
-#define CUDACHECK(cmd) do {                         \
-  cudaError_t e = cmd;                              \
-  if( e != cudaSuccess ) {                          \
-    printf("Failed: Cuda error %s:%d '%s'\n",             \
-        __FILE__,__LINE__,cudaGetErrorString(e));   \
-    exit(EXIT_FAILURE);                             \
+#define OR_SKIP(stmt, msg) \
+  if (PRINT_IF_ERROR(stmt)) { \
+    state.SkipWithError(msg); \
+    return; \
+  }
+#define NCCL_SKIP(cmd,msg) {                         \
+  ncclResult_t e = cmd;                              \
+  if( e != ncclSuccess ) {                          \
+    state.SkipWithError(msg);   \
+    return;                             \
   }                                                 \
-} while(0)
-#define NCCLCHECK(cmd) do {                         \
-  ncclResult_t r = cmd;                             \
-  if (r!= ncclSuccess) {                            \
-    printf("Failed, NCCL error %s:%d '%s'\n",             \
-        __FILE__,__LINE__,ncclGetErrorString(r));   \
-    exit(EXIT_FAILURE);                             \
-  }                                                 \
-} while(0)
+}
 
 
 static void NCCL_ops_broadcast(benchmark::State &state) {
@@ -50,46 +46,46 @@ static void NCCL_ops_broadcast(benchmark::State &state) {
   cudaEvent_t* stops = (cudaEvent_t*)malloc(sizeof(cudaEvent_t)*nDev);
 
   for (int i = 0; i < nDev; ++i) {
-    CUDACHECK(cudaSetDevice(i));
-    CUDACHECK(cudaMalloc(sendbuff + i, bytes * sizeof(float)));
-    CUDACHECK(cudaMalloc(recvbuff + i, bytes * sizeof(float)));
-    CUDACHECK(cudaMemset(sendbuff[i], 1, bytes * sizeof(float)));
-    CUDACHECK(cudaMemset(recvbuff[i], 0, bytes * sizeof(float)));
-    CUDACHECK(cudaStreamCreate(s+i));
-    CUDACHECK(cudaEventCreate(starts+i));
-    CUDACHECK(cudaEventCreate(stops+i));
+    OR_SKIP(cudaSetDevice(i), NAME " failed to set device");
+    OR_SKIP(cudaMalloc(sendbuff + i, bytes * sizeof(float)), NAME " failed to perform cudaMalloc");
+    OR_SKIP(cudaMalloc(recvbuff + i, bytes * sizeof(float)), NAME " failed to perform cudaMalloc");
+    OR_SKIP(cudaMemset(sendbuff[i], 1, bytes * sizeof(float)), NAME " failed to perform cudaMemset");
+    OR_SKIP(cudaMemset(recvbuff[i], 0, bytes * sizeof(float)), NAME " failed to perform cudaMemset");
+    OR_SKIP(cudaStreamCreate(s+i), NAME " failed to create stream");
+    OR_SKIP(cudaEventCreate(starts+i), NAME " failed to create event");
+    OR_SKIP(cudaEventCreate(stops+i), NAME " failed to creat event");
   }
 
   cudaEvent_t start, stop;
-  CUDACHECK(cudaEventCreate(&start));
-  CUDACHECK(cudaEventCreate(&stop));
+  OR_SKIP(cudaEventCreate(&start), NAME " failed to create event");
+  OR_SKIP(cudaEventCreate(&stop), NAME " failed to create event");
 
    //initializing NCCL
-  NCCLCHECK(ncclCommInitAll(comms, nDev, devs));
+  NCCL_SKIP(ncclCommInitAll(comms, nDev, devs), NAME " failed to initalize comm");
   for(auto _ : state){
 
-  CUDACHECK(cudaEventRecord(start, NULL));
+  OR_SKIP(cudaEventRecord(start, NULL), NAME " failed to record start event");
 
-  NCCLCHECK(ncclGroupStart());
+  NCCL_SKIP(ncclGroupStart(), NAME " failed to start group");
   for (int i = 0; i < nDev; ++i){
-    CUDACHECK(cudaEventRecord(starts[i], s[i]));
-    NCCLCHECK(ncclBroadcast(sendbuff[i], recvbuff[i], bytes, ncclFloat, ncclSum,
-        comms[i], s[i]));
-    CUDACHECK(cudaEventRecord(stops[i], s[i]));
+    OR_SKIP(cudaEventRecord(starts[i], s[i]), NAME " failed to record start event");
+    NCCL_SKIP(ncclBroadcast(sendbuff[i], recvbuff[i], bytes, ncclFloat, ncclSum,
+        comms[i], s[i]), NAME " failed to perform broadcast");
+    OR_SKIP(cudaEventRecord(stops[i], s[i]), NAME " failed to record stop event");
   }
-  NCCLCHECK(ncclGroupEnd());
-  CUDACHECK(cudaEventRecord(stop, NULL));
+  NCCL_SKIP(ncclGroupEnd(), NAME " failed to stop group");
+  OR_SKIP(cudaEventRecord(stop, NULL), NAME " failed to record stop event");
 
   //synchronize
   for (int i = 0; i < nDev; ++i) {
-    CUDACHECK(cudaStreamSynchronize(s[i])); 
+    OR_SKIP(cudaStreamSynchronize(s[i]), NAME " failed to synchronize streams"); 
   }
-  CUDACHECK(cudaEventSynchronize(stop));
+  OR_SKIP(cudaEventSynchronize(stop), NAME " failed to syncrhonize events");
 
   //timing
   state.PauseTiming();
   float msecTotal = 0.0f;
-  CUDACHECK(cudaEventElapsedTime(&msecTotal, start, stop));
+  OR_SKIP(cudaEventElapsedTime(&msecTotal, start, stop), NAME " failed to compute elapsed time");
 
   state.SetIterationTime(msecTotal/ 1000);
   state.ResumeTiming();
@@ -104,7 +100,7 @@ static void NCCL_ops_broadcast(benchmark::State &state) {
   float total = 0.0f;
   std::vector<float> device = {d0, d1, d2, d3};
   for (int i = 0; i < nDev; ++i ) {
-    CUDACHECK(cudaEventElapsedTime(&device[i], starts[i] , stops[i]));
+    OR_SKIP(cudaEventElapsedTime(&device[i], starts[i] , stops[i]), NAME " failed to compare times");
     total += device[i];
   }
 
@@ -116,9 +112,9 @@ static void NCCL_ops_broadcast(benchmark::State &state) {
 
   //free device buffers
   for (int i = 0; i < nDev; ++i) {
-    CUDACHECK(cudaSetDevice(i));
-    CUDACHECK(cudaFree(sendbuff[i]));
-    CUDACHECK(cudaFree(recvbuff[i]));
+    OR_SKIP(cudaSetDevice(i), NAME " failed to set device");
+    OR_SKIP(cudaFree(sendbuff[i]), NAME " failed to free sendbuff");
+    OR_SKIP(cudaFree(recvbuff[i]), NAME " failed to free recvbuff");
   }
 
   //destroy comms
