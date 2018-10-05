@@ -27,13 +27,16 @@
 }
 
 
-static void NCCL_ops_broadcast(benchmark::State &state) {
+auto NCCL_ops_broadcast = [](benchmark::State &state) {
   const int nDev = FLAG(ngpu);
-  ncclComm_t comms[nDev];
+  std::vector<ncclComm_t> communicator(nDev);
+  ncclComm_t* comms = &communicator[0];
 
   //managing nDev devices
   const auto bytes = 1ULL << static_cast<size_t>(state.range(0));
-  int devs[nDev];
+  std::vector<int> devices(nDev);
+  int* devs = &devices[0];
+
   for(int i =0 ; i < nDev; ++i){
     devs[i]=FLAG(cuda_device_ids)[i];
   }
@@ -121,6 +124,21 @@ static void NCCL_ops_broadcast(benchmark::State &state) {
   for(int i = 0; i < nDev; ++i)
       ncclCommDestroy(comms[i]);
 
+};
+
+static void registerer() {
+  std::string name;
+  //for (auto cuda_id : unique_cuda_device_ids()) {
+   // for (auto numa_id : unique_numa_ids()) {
+      name = std::string(NAME) ;
+      benchmark::RegisterBenchmark(name.c_str(), NCCL_ops_broadcast)->SMALL_ARGS()->UseManualTime();
+     // name = std::string(NAME) + "_flush/" + std::to_string(numa_id) + "/" + std::to_string(cuda_id);
+     // benchmark::RegisterBenchmark(name.c_str(), Comm_NUMAMemcpy_GPUToHost, numa_id, cuda_id, true)->SMALL_ARGS()->UseManualTime();
+    //}
+  //}
 }
-BENCHMARK(NCCL_ops_broadcast)->Apply(ArgsCountGpuGpuGpuGpu)->UseManualTime();
+
+SCOPE_REGISTER_AFTER_INIT(registerer);
+
+//BENCHMARK(NCCL_ops_broadcast)->Apply(ArgsCountGpuGpuGpuGpu)->UseManualTime();
 
