@@ -22,6 +22,16 @@ All support this arguemnt:
 
 
 
+## Changelog
+
+### v0.1.1
+
+  * Add changelog
+
+### v0.1.0
+
+  * Bandwidth benchmarks for `allGather`, `allReduce`, `broadcast`, `reduce`, `reduceScatter`.
+  * Disable NCCL|Scope by default (enable with `-DENABLE_NCCL=1`).
 
 
 
