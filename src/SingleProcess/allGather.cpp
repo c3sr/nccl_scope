@@ -140,7 +140,7 @@ static void registerer() {
  // }
 }
 
-SCOPE_REGISTER_AFTER_INIT(registerer);
+SCOPE_REGISTER_AFTER_INIT(registerer, NAME);
 
 
 //BENCHMARK(NCCL_ops_allGather)->Apply(ArgsCountGpuGpuGpuGpu)->UseManualTime();
