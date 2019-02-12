@@ -1,4 +1,4 @@
-OPTION(ENABLE_NCCL "Enable NCCL|Scope (github.com/c3sr/nccl_scope)" ON)
+OPTION(ENABLE_NCCL "Enable NCCL|Scope (github.com/c3sr/nccl_scope)" OFF)
 if (NOT ENABLE_NCCL)
   return()
 endif()
